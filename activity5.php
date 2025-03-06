@@ -1,37 +1,21 @@
 <?php
 session_start();
 
-function getExchangeRate($from, $to) {
-    $apiKey = "74d6cda80547a0fb95eddaac";
-    $url = "https://v6.exchangerate-api.com/v6/$apiKey/latest/$from"; 
-    
-    try {
-        if (!ini_get('allow_url_fopen')) {
-            throw new Exception('allow_url_fopen close');
-        }
-        
-        $response = file_get_contents($url);
-        if ($response === false) {
-            throw new Exception('API did not respond');
-        }
-        
-        $data = json_decode($response, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('JSON eroor');
-        }
-        
-        if (!isset($data["conversion_rates"]) && isset($data["rates"])) {
-            $data["conversion_rates"] = $data["rates"];
-        }
-        
-        if (isset($data["conversion_rates"][$to])) {
-            return $data["conversion_rates"][$to];
-        }
-        
-        return false;
-    } catch (Exception $e) {
-        return false;
-    }
+$exchangeRates = array(
+    "USD_CAD" => 1.43,
+    "USD_EUR" => 0.93,
+    "USD_USD" => 1,
+    "CAD_USD" => 0.7,
+    "CAD_EUR" => 0.65,
+    "CAD_CAD" => 1,
+    "EUR_USD" => 1.08,
+    "EUR_CAD" => 1.54,
+    "EUR_EUR" => 1
+);
+
+function getExchangeRate($from, $to, $rates) {
+    $key = "{$from}_{$to}";
+    return isset($rates[$key]) ? $rates[$key] : false;
 }
 
 $converted_amount = "";
@@ -41,16 +25,12 @@ if (isset($_GET['convert'])) {
     $from_currency = $_GET['from_currency'];
     $to_currency = $_GET['to_currency'];
 
-    if ($from_currency == $to_currency) {
-        $converted_amount = $from_value;
+    $rate = getExchangeRate($from_currency, $to_currency, $exchangeRates);
+    if ($rate !== false) {
+        $converted_amount = $from_value * $rate;
     } else {
-        $rate = getExchangeRate($from_currency, $to_currency);
-        if ($rate) {
-            $converted_amount = $from_value * $rate;
-        } else {
-            echo "<p style='color:red;'>Conversion rate not available!</p>";
-            $converted_amount = 0;
-        }
+        echo "<p style='color:red;'>Conversion rate not available!</p>";
+        $converted_amount = 0;
     }
 
     $_SESSION['from_value'] = $from_value;
